@@ -2,7 +2,7 @@
     <div id="country" @click="expand()">
         {{name}}
         <div id='cities' v-if="expanded">
-            <div v-bind:key="city.id" v-for="city in this.cities">
+            <div v-bind:key="index" v-for="(city, index) in this.cities">
                 <City v-bind="city"/>
             </div>
         </div>
@@ -22,18 +22,22 @@ export default {
     data() {
     return {
         expanded: false,
+        rendered: false,
         cities: []
     }
     },
     methods: {
     expand() {
-        if (this.cities.length===0) {
+        if (!this.rendered) {
             const url = 'https://api.openaq.org/v1/cities?country='+this.code;
             axios.get(url)
-                .then(response => this.cities = response.data.results)
+                .then(response => {
+                    this.cities = response.data.results;
+                    this.rendered = true;
+                })
                 .catch(function(err) { console.log(err)});
         }
-        this.expanded = true;
+        this.expanded = !this.expanded;
     }
   }
 }

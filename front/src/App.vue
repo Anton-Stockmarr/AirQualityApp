@@ -3,7 +3,7 @@
     <h1>Open AQ</h1>
     <h2><a href="https://openaq.org">https://openaq.org</a></h2>
     <div id="data-box">
-      <div v-bind:key="country.id" v-for="country in this.countries">
+      <div v-bind:key="index" v-for="(country, index) in this.countries">
         <Country v-bind="country" />
       </div>
     </div>
@@ -26,7 +26,7 @@ export default {
   },
   mounted() {
     axios.get('https://api.openaq.org/v1/countries')
-      .then(response => this.countries = response.data.results)
+      .then(response => {this.countries = response.data.results})
       .catch(function(err) { console.log(err)});
   }
 }

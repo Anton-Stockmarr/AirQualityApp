@@ -1,5 +1,5 @@
 <template>
-    <div id="city" @click="expand()">
+    <div id="city" @click="expand($event)">
         <div>{{this.name}}</div>
         <div id="chart-container" v-if="this.expanded">
             <AirChart v-if="this.rendered" id="chart" v-bind="chart"/>
@@ -27,7 +27,8 @@ export default {
         }
     },
     methods: {
-    expand() {
+    expand(event) {
+        event.stopPropagation();
         if (!this.rendered) {
             const url = 'https://api.openaq.org/v1/measurements?city='+this.city;
             axios.get(url)
@@ -90,7 +91,7 @@ export default {
 
 #chart-container {
     padding: 10px 30px 0;
-    width: 100%;
+    max-width: 100%;
     height: 400px;
 }
 
