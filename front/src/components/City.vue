@@ -1,21 +1,25 @@
 <template>
     <div id="city" @click="expand($event)">
         <div>{{this.name}}</div>
-        <div id="chart-container" v-if="this.expanded">
-            <AirChart v-if="this.rendered" id="chart" v-bind="chart"/>
+        <div v-if="this.expanded">
+            <div v-if="this.error.status">
+                <h3>{{this.error.message}}</h3>
+            </div>
+            <div  id="chart-container" v-if="this.rendered & !this.error.status">
+            <AirChart id="chart" v-bind="chart"/>
+            </div>
         </div>
     </div>
 </template>
 
 <script>
 import axios from 'axios';
-//import chart from 'chart.js'
 import AirChart from './AirChart'
 
 
 export default {
     name: 'City',
-    props: ['city','name','id'],
+    props: ['city','name'],
     components: {
         AirChart
     },
@@ -23,23 +27,35 @@ export default {
         return {
             expanded: false,
             rendered: false,
-            chart: {chartdata: {}, options: {}}
+            chart: {
+                chartdata: {},
+                options: {}
+            },
+            error: {
+                status: false,
+                message: ''
+            }
         }
     },
     methods: {
     expand(event) {
         event.stopPropagation();
         if (!this.rendered) {
-            const url = 'https://api.openaq.org/v1/measurements?city='+this.city;
+            const url = `https://api.openaq.org/v1/measurements?city=${this.city}`;
             axios.get(url)
                 .then(response => this.parseData(response.data.results))
-                .then(measurements => this.configureChart(measurements))
                 .then(() => this.rendered = true)
                 .catch(function(err) { console.log(err)});
         }
         this.expanded = !this.expanded;
     },
     parseData(result) {
+        if (result.length === 0) {
+            this.setError('No measurements were found for this city');
+            return 0;
+        } else {
+            this.clearError();
+        }
         let measurements = {
             values: [],
             dates: [],
@@ -47,16 +63,14 @@ export default {
             }
         measurements.values = result.map(measurement => measurement.value);
         measurements.dates = result.map(measurement => measurement.date.local);
-        if (result.length != 0) {
-            measurements.unit = result[0].unit;
-        }
-        return measurements;
+        measurements.unit = result[0].unit;
+        this.configureChart(measurements);
     },
     configureChart(measurements) {
         this.chart.chartdata = {
             labels: measurements.dates,
             datasets: [{
-                label: 'Pollution ['+measurements.unit+']',
+                label: `Pollution [${measurements.unit}]`,
                 backgroundColor: '#f87979',
                 data: measurements.values,
                 borderWidth: 1
@@ -73,6 +87,14 @@ export default {
                 }]
             }
         }
+    },
+    setError(message){
+      this.error.status = true;
+      this.error.message = message;
+    },
+    clearError(){
+      this.error.status = false;
+      this.error.message = '';
     }
   }
 }

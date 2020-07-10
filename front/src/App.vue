@@ -1,9 +1,37 @@
 <template>
   <div id="app">
     <h1>Open AQ</h1>
-    <h2><a href="https://openaq.org">https://openaq.org</a></h2>
-    <div id="data-box">
-      <div v-bind:key="index" v-for="(country, index) in this.countries">
+    <h2><a href="https://openaq.org">
+      https://openaq.org
+    </a></h2>
+    <nav>
+      <div id="page-navigation">
+        <h3>page:</h3>
+        <div class="page-btn" :key="p" v-for="p in this.maxpages">
+          <button :class="{chosen: p === page}" @click="changePage(p)">{{p}}</button>
+        </div>
+      </div>
+      <div id="coordinate-input">
+        <h3>longitude:</h3>
+        <input type="text" v-model="longitude">
+        <h3>latitude:</h3>
+        <input type="text" v-model="latitude">
+        <button @click="getLocation()">Find nearest</button>
+      </div>
+    </nav>
+    <div v-if="searchPage">
+      <button @click="toggleSearch(false)">Back</button>
+      <Location
+        :location="searchLocation.location"
+        :city="searchLocation.city"
+        :country="searchLocation.country"
+        :render="renderSearchChart"
+        :error="error"
+      />
+    </div>
+    <div v-if="!searchPage">
+      <div v-if="error.status">{{error.message}}</div>
+      <div :key="index" v-for="(country, index) in this.countries">
         <Country v-bind="country" />
       </div>
     </div>
@@ -13,21 +41,88 @@
 <script>
 import axios from 'axios';
 import Country from './components/Country'
+import Location from './components/Location'
 
 export default {
   name: 'App',
   components: {
-    Country
-  },
+    Country,
+    Location
+  }, 
   data() {
     return {
-      countries: []
+      searchPage: false,
+      page: 1,
+      maxpages: 5,
+      countries: [],
+      longitude: '',
+      latitude: '',
+      searchLocation: {
+        location: '',
+        city: '',
+        country: ''
+      },
+      renderSearchChart: false,
+      error: {
+        status: false,
+        message: ''
+      }
     }
   },
   mounted() {
-    axios.get('https://api.openaq.org/v1/countries')
-      .then(response => {this.countries = response.data.results})
-      .catch(function(err) { console.log(err)});
+    this.getCountries();
+},
+  methods: {
+    changePage(newPage){
+      if (newPage!==this.page){
+        this.page= newPage;
+        this.getCountries();
+      }
+      if (this.searchPage) {
+        this.toggleSearch();
+      }
+    },
+    getCountries(){
+      axios.get(`https://api.openaq.org/v1/countries?limit=20&page=${this.page}`)
+        .then(response => this.parseCountries(response.data.results))
+        .catch(err => { this.setError(err)});
+    },
+    parseCountries(result){
+      if (result.length === 0){
+        this.setError('No countries were loaded');
+      } else {
+        this.clearError();
+        this.countries = result;
+      }
+    },
+    getLocation() {
+      this.renderSearchChart = false;
+      axios.get(`https://api.openaq.org/v1/locations?coordinates=${this.latitude},${this.longitude}&order_by=distance&radius=100000`)
+        .then(response => {
+          if (response.data.results.length > 0){
+            this.searchLocation = response.data.results[0];
+            this.renderSearchChart = true;
+            this.error.status = false;
+          } else {
+            this.error.status = true;
+            this.error.message = "No results found for this location";
+          }
+          })
+        .catch(err => this.setError(err));
+      this.searchPage = true;
+    },
+    toggleSearch(newState) {
+      this.searchPage = newState;
+      this.renderSearchChart = newState;
+    },
+    setError(message){
+      this.error.status = true;
+      this.error.message = message;
+    },
+    clearError(){
+      this.error.status = false;
+      this.error.message = '';
+    }
   }
 }
 </script>
@@ -42,8 +137,11 @@ a {
 
 
 #app {
+  box-sizing: border-box;
+  padding: 20px;
   margin: 0 auto;
   width: 100%;
+  min-height: 100vh;
   background-color: gray;
 }
 
@@ -58,8 +156,55 @@ a {
   font-size: 20px;
 }
 
-#data-box {
-  margin: 20px 20px 0;
-  padding-bottom: 20px;
+nav {
+  background-color: cadetblue;
+  box-sizing: border-box;
+  height: 60px;
+  width: 100%;
+  padding: 10px 20px;
+  margin: 20px 0;
 }
+
+nav h3 {
+  display: inline-block;
+  margin-right: 5px;
+  font-size: 20px;
+}
+
+
+
+nav div {
+  display: block;
+  height: 40px;
+  line-height: 40px;
+}
+
+#page-navigation {
+  float: left;
+}
+
+#page-navigation .page-btn{
+  display: inline-block;
+  height: 30px;
+  width: 30px;
+  margin: 0 5px;
+}
+
+.page-btn button {
+  height: 100%;
+  width: 100%;
+}
+
+.chosen {
+  background-color: #DAAD86;
+}
+
+#coordinate-input {
+  float: right;
+}
+
+#coordinate-input input {
+  margin-right: 20px;
+}
+
 </style>
