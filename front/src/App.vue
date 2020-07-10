@@ -16,18 +16,15 @@
         <input type="text" v-model="longitude">
         <h3>latitude:</h3>
         <input type="text" v-model="latitude">
-        <button @click="getLocation()">Find nearest</button>
+        <button @click="search()">Find nearest</button>
       </div>
     </nav>
-    <div v-if="searchPage">
+    <div v-show="searchPage">
       <button @click="toggleSearch(false)">Back</button>
       <Location
-        :location="searchLocation.location"
-        :city="searchLocation.city"
-        :country="searchLocation.country"
-        :render="renderSearchChart"
-        :error="error"
-      />
+        :longitude="longitude"
+        :latitude="latitude"
+        :searchBus="searchBus"/>
     </div>
     <div v-if="!searchPage">
       <div v-if="error.status">{{error.message}}</div>
@@ -39,9 +36,10 @@
 </template>
 
 <script>
-import axios from 'axios';
+import axios from 'axios'
 import Country from './components/Country'
 import Location from './components/Location'
+import Vue from 'vue'
 
 export default {
   name: 'App',
@@ -52,17 +50,12 @@ export default {
   data() {
     return {
       searchPage: false,
+      searchBus: new Vue(),
       page: 1,
       maxpages: 5,
       countries: [],
       longitude: '',
       latitude: '',
-      searchLocation: {
-        location: '',
-        city: '',
-        country: ''
-      },
-      renderSearchChart: false,
       error: {
         status: false,
         message: ''
@@ -73,6 +66,10 @@ export default {
     this.getCountries();
 },
   methods: {
+    search() {
+      this.toggleSearch(true);
+      this.searchBus.$emit('search');
+    },
     changePage(newPage){
       if (newPage!==this.page){
         this.page= newPage;
@@ -94,22 +91,6 @@ export default {
         this.clearError();
         this.countries = result;
       }
-    },
-    getLocation() {
-      this.renderSearchChart = false;
-      axios.get(`https://api.openaq.org/v1/locations?coordinates=${this.latitude},${this.longitude}&order_by=distance&radius=100000`)
-        .then(response => {
-          if (response.data.results.length > 0){
-            this.searchLocation = response.data.results[0];
-            this.renderSearchChart = true;
-            this.error.status = false;
-          } else {
-            this.error.status = true;
-            this.error.message = "No results found for this location";
-          }
-          })
-        .catch(err => this.setError(err));
-      this.searchPage = true;
     },
     toggleSearch(newState) {
       this.searchPage = newState;

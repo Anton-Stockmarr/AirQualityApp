@@ -1,7 +1,7 @@
 <template>
     <div id="location">
         <div v-if="!error.status">
-            <div>{{this.city}} ({{this.country}})</div>
+            <div v-if="this.city!=''">{{this.city}} ({{this.country}})</div>
             <div id="chart-container">
                 <AirChart v-if="this.rendered" id="chart" v-bind="chart"/>
             </div>
@@ -19,34 +19,71 @@ import AirChart from './AirChart'
 
 export default {
     name: 'Location',
-    props: ['location','city','country', 'render', 'error'],
+    props: ['longitude','latitude','searchBus'],
     components: {
         AirChart
     },
     data() {
         return {
+            country: '',
+            city: '',
+            location: '',
             rendered: false,
-            chart: {chartdata: {}, options: {}}
+            chart: {
+                chartdata: {},
+                options: {}
+            },
+            error: {
+                status: false,
+                message: ''
+            }
         }
     },
-    watch: {
-        'render': function(){
-            if (this.render){
-                this.getResults();
-            }
-        },
+    created() {
+        this.searchBus.$on('search', () => this.searchLocation());
     },
     methods: {
-        getResults() {
+        searchLocation(){
             this.rendered = false;
-            const url = `https://api.openaq.org/v1/measurements?location=${this.location}`;
-            axios.get(url)
+            this.getLocation()
+                .then(() => {
+                    if (!this.error.status){
+                        return this.getData();
+                    }
+                })
+                .then(() => {
+                    if (!this.error.status) {
+                        this.rendered = true;
+                    }
+                });
+        },
+        getLocation() {
+            return axios.get(`https://api.openaq.org/v1/locations?coordinates=${this.latitude},${this.longitude}&order_by=distance&radius=100000`)
+                .then(response => this.parseLocation(response.data.results))
+                .catch(err => this.setError(err));
+        },
+        parseLocation(result) {            
+            if (result.length === 0){
+                this.setError("No locations found for these coordinates");
+            } else {
+                this.clearError();
+                this.location = result[0].location;
+                this.city = result[0].city;
+                this.country = result[0].country;
+            }
+        },
+        getData() {
+            return axios.get(`https://api.openaq.org/v1/measurements?location=${this.location}`)
                 .then(response => this.parseData(response.data.results))
-                .then(measurements => this.configureChart(measurements))
-                .then(() => this.rendered = true)
-                .catch(function(err) { console.log(err)});
+                .catch(err => this.setError(err));
         },
         parseData(result) {
+            if (result.length === 0) {
+                this.setError(`${this.city} (${this.country}): No measurements were found`);
+                return 0;
+            } else {
+                this.clearError();
+            }
             let measurements = {
                 values: [],
                 dates: [],
@@ -54,10 +91,8 @@ export default {
                 }
             measurements.values = result.map(measurement => measurement.value);
             measurements.dates = result.map(measurement => measurement.date.local);
-            if (result.length != 0) {
-                measurements.unit = result[0].unit;
-            }
-            return measurements;
+            measurements.unit = result[0].unit;
+            this.configureChart(measurements);
         },
         configureChart(measurements) {
             this.chart.chartdata = {
@@ -80,6 +115,14 @@ export default {
                     }]
                 }
             }
+        },
+        setError(message){
+            this.error.status = true;
+            this.error.message = message;
+        },
+        clearError(){
+            this.error.status = false;
+            this.error.message = '';
         }
     }
 }
