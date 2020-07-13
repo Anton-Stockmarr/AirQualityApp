@@ -45,6 +45,10 @@ export default {
     methods: {
         searchLocation(){
             this.rendered = false;
+            this.clearError();
+            if (this.checkInput(this.longitude,this.latitude)){
+                return;
+            }
             this.getLocation()
                 .then(() => {
                     if (!this.error.status){
@@ -56,6 +60,22 @@ export default {
                         this.rendered = true;
                     }
                 });
+        },
+        checkInput(long,lat) {
+            let regex = /^[\d]{1,2}(\.[\d]*)?$/;
+            if (long === '' || lat === '') {
+                this.setError('Both longitude and longitude must be filled out properly to search.');
+            }
+            else if (!long.match(regex) && !lat.match(regex)){
+                this.setError('You can only enter numbers, using digits and `.` or `,`');
+            }
+            else if (long < -180 || long> 180) {
+                this.setError('Longitude must be between -180 and 180');
+            }
+            else if (lat < -85 || lat > 85){
+                this.setError('Latitude must be between -85 and 85');
+            }
+            return this.error.status;
         },
         getLocation() {
             return axios.get(`https://api.openaq.org/v1/locations?coordinates=${this.latitude},${this.longitude}&order_by=distance&radius=100000`)

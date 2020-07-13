@@ -13,9 +13,9 @@
       </div>
       <div id="coordinate-input">
         <h3>longitude:</h3>
-        <input type="text" v-model="longitude">
+        <input type="number" v-model="longitude">
         <h3>latitude:</h3>
-        <input type="text" v-model="latitude">
+        <input type="number" v-model="latitude">
         <button @click="search()">Find nearest</button>
       </div>
     </nav>
@@ -116,6 +116,11 @@ a {
   text-decoration: none;
 }
 
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
+}
 
 #app {
   box-sizing: border-box;
