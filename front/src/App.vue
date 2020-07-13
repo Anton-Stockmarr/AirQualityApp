@@ -4,11 +4,14 @@
     <h2><a href="https://openaq.org">
       https://openaq.org
     </a></h2>
+
     <nav>
       <div id="page-navigation">
         <h3>page:</h3>
-        <div class="page-btn" :key="p" v-for="p in this.maxpages">
-          <button :class="{chosen: p === page}" @click="changePage(p)">{{p}}</button>
+        <div class="page-btn" :key="p" v-for="p in this.maxPages">
+          <button :class="{chosen: p === page}" @click="changePage(p)">
+            {{p}}
+          </button>
         </div>
       </div>
       <div id="coordinate-input">
@@ -16,16 +19,22 @@
         <input type="number" v-model="longitude">
         <h3>latitude:</h3>
         <input type="number" v-model="latitude">
-        <button @click="search()">Find nearest</button>
+        <button @click="search()">
+          Find nearest
+        </button>
       </div>
     </nav>
+
     <div v-show="searchPage">
-      <button @click="toggleSearch(false)">Back</button>
+      <button @click="toggleSearch(false)">
+        Back
+      </button>
       <Location
         :longitude="longitude"
         :latitude="latitude"
         :searchBus="searchBus"/>
     </div>
+    
     <div v-if="!searchPage">
       <div v-if="error.status">{{error.message}}</div>
       <div :key="index" v-for="(country, index) in this.countries">
@@ -52,7 +61,7 @@ export default {
       searchPage: false,
       searchBus: new Vue(),
       page: 1,
-      maxpages: 5,
+      maxPages: 0,
       countries: [],
       longitude: '',
       latitude: '',
@@ -63,7 +72,8 @@ export default {
     }
   },
   mounted() {
-    this.getCountries();
+    this.getMaxPages();
+    this.getPageCountries();
 },
   methods: {
     search() {
@@ -73,24 +83,36 @@ export default {
     changePage(newPage){
       if (newPage!==this.page){
         this.page= newPage;
-        this.getCountries();
+        this.getPageCountries();
       }
       if (this.searchPage) {
         this.toggleSearch();
       }
     },
-    getCountries(){
+    getPageCountries(){
       axios.get(`https://api.openaq.org/v1/countries?limit=20&page=${this.page}`)
         .then(response => this.parseCountries(response.data.results))
-        .catch(err => { this.setError(err)});
+        .catch(err =>  this.setError(err));
     },
     parseCountries(result){
       if (result.length === 0){
         this.setError('No countries were loaded');
       } else {
         this.clearError();
+        result.forEach(country => {
+          if (typeof(country.name)==='undefined'){
+            country.name = 'Unnamed country';
+          }
+        });
         this.countries = result;
       }
+    },
+    getMaxPages(){
+      axios.get(`https://api.openaq.org/v1/countries?limit=1000`)
+        .then(response => {
+          this.maxPages = Math.ceil(response.data.results.length/20);
+        })
+        .catch(err =>  this.setError(err));
     },
     toggleSearch(newState) {
       this.searchPage = newState;

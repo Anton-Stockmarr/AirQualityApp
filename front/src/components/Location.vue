@@ -3,7 +3,7 @@
         <div v-if="!error.status">
             <div v-if="this.city!=''">{{this.city}} ({{this.country}})</div>
             <div id="chart-container">
-                <AirChart v-if="this.rendered" id="chart" v-bind="chart"/>
+                <AirChart v-if="this.rendered" id="chart" :measurements="measurements"/>
             </div>
         </div>
         <div v-if="error.status">
@@ -29,9 +29,10 @@ export default {
             city: '',
             location: '',
             rendered: false,
-            chart: {
-                chartdata: {},
-                options: {}
+            measurements: {
+                values: {},
+                dates: {},
+                unit: ''
             },
             error: {
                 status: false,
@@ -104,37 +105,9 @@ export default {
             } else {
                 this.clearError();
             }
-            let measurements = {
-                values: [],
-                dates: [],
-                unit: ''
-                }
-            measurements.values = result.map(measurement => measurement.value);
-            measurements.dates = result.map(measurement => measurement.date.local);
-            measurements.unit = result[0].unit;
-            this.configureChart(measurements);
-        },
-        configureChart(measurements) {
-            this.chart.chartdata = {
-                labels: measurements.dates,
-                datasets: [{
-                    label: `Pollution [${measurements.unit}]`,
-                    backgroundColor: '#f87979',
-                    data: measurements.values,
-                    borderWidth: 1
-                }]
-            };
-            this.chart.options = {
-                responsive:true,
-                maintainAspectRatio: false,
-                scales: {
-                    yAxes: [{
-                        ticks: {
-                            beginAtZero: true
-                        }
-                    }]
-                }
-            }
+            this.measurements.values = result.map(measurement => measurement.value);
+            this.measurements.dates = result.map(measurement => measurement.date.local);
+            this.measurements.unit = result[0].unit;
         },
         setError(message){
             this.error.status = true;
