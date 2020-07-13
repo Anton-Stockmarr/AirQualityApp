@@ -63,7 +63,7 @@ export default {
                 });
         },
         checkInput(long,lat) {
-            let regex = /^[\d]{1,2}(\.[\d]*)?$/;
+            let regex = /^[\d]{1,3}(\.[\d]*)?$/;
             if (long === '' || lat === '') {
                 this.setError('Both longitude and longitude must be filled out properly to search.');
             }
